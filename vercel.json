@@ -5,7 +5,7 @@
             "use":"@vercel/python"
         }
     ],
-    "route":[
+    "routes":[
         {
             "src":"/(.*)",
             "dest":"ecommer_electronica_backend2/wsgi.py"
