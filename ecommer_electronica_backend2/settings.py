@@ -83,7 +83,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://tecno-store-eccommerse-app.netlify.app/"
+    "https://tecno-store-eccommerse-app.netlify.app"
 ]
 
 CORS_ALLOW_ALL_ORIGINS = False
