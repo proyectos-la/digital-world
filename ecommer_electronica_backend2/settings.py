@@ -1,8 +1,12 @@
 import os
 from pathlib import Path
 import environ
+import pymysql
+
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
+
+pymysql.install_as_MySQLdb()
 
 env = environ.Env()
 env.read_env(os.path.join(BASE_DIR, '.env'))
@@ -35,6 +39,7 @@ ROOT_URLCONF = 'ecommer_electronica_backend2.urls'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -77,6 +82,7 @@ TEMPLATES = [
 SITE_ID = 1
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
