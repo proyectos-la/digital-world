@@ -3,10 +3,9 @@ from pathlib import Path
 import environ
 import pymysql
 
+pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
-
-pymysql.install_as_MySQLdb()
 
 env = environ.Env()
 env.read_env(os.path.join(BASE_DIR, '.env'))
