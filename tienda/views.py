@@ -79,7 +79,6 @@ def login_user(request):
         password = serializer.validated_data.get("password")
 
         user = authenticate_user(username_or_email=username_or_email, password=password)
-
         if user:
             has_password = user.has_usable_password()
 
@@ -91,6 +90,7 @@ def login_user(request):
                 image_profile = None
 
             token, created = Token.objects.get_or_create(user=user)
+            print(user)
             return Response(
                 {
                     "id": user.id,
@@ -120,20 +120,23 @@ def login_user(request):
 @permission_classes([AllowAny])
 def google_login(request):
     credential = request.data.get("credential")
+    print("Credential received:", credential)
     client_id = (
         "963077110039-a25ipd3d3aal87omlseibm178m2n6jht.apps.googleusercontent.com"
     )
 
     if not credential:
         return Response(
-            {"error: Debe Proporcionar la credencial de google"},
+            {"error": "Debe proporcionar la credencial de Google"},
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
     try:
         user_authenticated = id_token.verify_oauth2_token(
-            credential, requests.Request(), client_id
+            credential, requests.Request(), client_id, clock_skew_in_seconds=60
         )
+
+        print("User authenticated:", user_authenticated)
 
         if user_authenticated:
             email = user_authenticated.get("email")
@@ -171,14 +174,14 @@ def google_login(request):
                 {"error": "Credencial inválida"}, status=status.HTTP_401_UNAUTHORIZED
             )
 
-    except ValueError:
+    except ValueError as e:
+        print("Error de verificación de token:", e)
         return Response(
-            {"error": "Token inválido o expirado"}, status=status.HTTP_400_BAD_REQUEST
+            {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
         )
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @api_view(["POST"])
 def logout_user(request):
@@ -406,7 +409,6 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[AllowAny])
     def get_comments(self, request):
-        print(request)
         page_identifier = request.query_params.get("page_id")
         product_id = request.query_params.get("product")
         user = request.user.id
@@ -437,7 +439,6 @@ class CommentViewSet(viewsets.ModelViewSet):
             {"error": "Debe proporcionar un page_id o product_id."},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -472,7 +473,6 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(
             "Parámetro user_id faltante", status=status.HTTP_400_BAD_REQUEST
         )
-
 
 class OrderItemViewSet(viewsets.ModelViewSet):
     queryset = OrderItem.objects.all()

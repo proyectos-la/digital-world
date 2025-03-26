@@ -14,6 +14,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
         
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=150, 
+        required=True, 
+        allow_blank=False
+    )
+
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
     image = serializers.SerializerMethodField()
@@ -32,7 +38,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return None 
 
     def validate(self, data):
-        # Validar que las contraseñas coincidan
+        username = data.get("username", "")
+
+        if " " in username:
+            raise serializers.ValidationError(
+                {"username": "El Usuario no puede contener espacios. Usa '_' o '-' o '.' en su lugar."}
+            )
+        
         if data["password"] != data["confirm_password"]:
             raise serializers.ValidationError(
                 {"password": "Las contraseñas no coinciden"}
@@ -51,7 +63,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        # Crear el usuario utilizando el método create_user
         user = User.objects.create_user(
             username=validated_data["username"],
             email=validated_data["email"],

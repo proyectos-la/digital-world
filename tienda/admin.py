@@ -11,7 +11,7 @@ class ProductImageInline(admin.TabularInline):
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 1
-    readonly_fields = ("product_images",)  # Asegúrate de que solo sea de lectura
+    readonly_fields = ("product_images",)
 
     def product_images(self, obj):
         images = obj.product.images.all()
