@@ -38,6 +38,10 @@ from django.shortcuts import get_object_or_404
 
 from urllib.parse import urlparse
 
+from django.core.files import File
+from io import BytesIO
+
+
 User = get_user_model()
 
 
@@ -136,8 +140,6 @@ def google_login(request):
             credential, requests.Request(), client_id, clock_skew_in_seconds=60
         )
 
-        print("User authenticated:", user_authenticated)
-
         if user_authenticated:
             email = user_authenticated.get("email")
             username = user_authenticated.get("name")
@@ -150,6 +152,11 @@ def google_login(request):
             if created:
                 user.set_unusable_password()
                 user.save()
+
+                if profile_picture:
+                    response = requests.get(profile_picture)
+                    image = BytesIO(response.content)
+                    user.profile_picture.save('profile_picture.jpg', File(image), save=True)
 
             has_password = user.has_usable_password()
 

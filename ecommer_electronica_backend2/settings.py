@@ -10,15 +10,6 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 env = environ.Env()
 env.read_env(os.path.join(BASE_DIR, '.env'))
 
-print(env('SECRET_KEY'))
-print(env('DEBUG'))
-print(env('ALLOWED_HOSTS'))
-print(env('DB_NAME'))
-print(env('DB_USER'))
-print(env('DB_PASSWORD'))
-print(env('DB_HOST'))
-print(env('DB_PORT'))
-
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', default=False)
 ALLOWED_HOSTS = ["*"]
@@ -63,11 +54,11 @@ MIDDLEWARE = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ecommerse_electronica',
-        'USER': 'root',
-        'PASSWORD': '9973',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': env('DB_NAME'),
+        'USER': env('DB_USER'),
+        'PASSWORD': env('DB_PASSWORD'),
+        'HOST': env('DB_HOST'),
+        'PORT': env('DB_PORT'),
     }
 }
 
