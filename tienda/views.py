@@ -190,6 +190,7 @@ def google_login(request):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 @api_view(["POST"])
 def logout_user(request):
     try:
@@ -369,6 +370,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         return Response({"detail": "No related products found."}, status=404)
     
+
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
@@ -447,6 +449,7 @@ class CommentViewSet(viewsets.ModelViewSet):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
@@ -481,6 +484,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             "Parámetro user_id faltante", status=status.HTTP_400_BAD_REQUEST
         )
 
+
 class OrderItemViewSet(viewsets.ModelViewSet):
     queryset = OrderItem.objects.all()
     serializer_class = OrderItemSerializer
@@ -497,12 +501,21 @@ class OrderItemViewSet(viewsets.ModelViewSet):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+
+    def list(self, request, *args, **kwargs):
+        if not self.queryset.exists():
+            return Response({"message": "No categories found."}, status=404)
+        
+        return super().list(request, *args, **kwargs)
     
     @action(detail=False, methods=['get'], url_path='on-sale-categories')
     def on_sale_categories(self, request):
         categories_with_sale_products = Category.objects.filter(
             products__is_on_sale=True
         ).distinct()
+
+        if not categories_with_sale_products:
+            return Response({"message": "No categories with products on sale found."}, status=404)
 
         serializer = self.get_serializer(categories_with_sale_products, many=True)
         return Response(serializer.data)
@@ -513,6 +526,9 @@ class CategoryViewSet(viewsets.ModelViewSet):
         categories_with_recent_products = Category.objects.filter(
             products__created_at__gte=one_month_ago
         ).distinct()
+
+        if not categories_with_recent_products:
+            return Response({"message": "No recent categories found."}, status=404)
 
         serializer = self.get_serializer(categories_with_recent_products, many=True)
         return Response(serializer.data)
