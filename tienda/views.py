@@ -22,6 +22,7 @@ from .serializers import (
     OrderItemSerializer,
     CommentSerializer,
     UserProfileSerializer,
+    ProductImageSerializer
 )
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
@@ -594,3 +595,12 @@ class UserProfileImageView(APIView):
             )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductImageViewSet(viewsets.ModelViewSet):
+    queryset = ProductImage.objects.all()
+    serializer_class = ProductImageSerializer
+
+    def perform_destroy(self, instance):
+        instance.image.delete()
+        instance.delete()

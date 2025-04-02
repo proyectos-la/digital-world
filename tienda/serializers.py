@@ -345,3 +345,9 @@ class OrderSerializer(serializers.ModelSerializer):
             )
 
         return order
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ["id", "image", "product"] 
