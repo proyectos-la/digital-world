@@ -1,7 +1,8 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
 from django.contrib.auth import get_user_model
 from django.conf import settings
+
+from cloudinary.models import CloudinaryField
 
 User = get_user_model()
 
@@ -49,7 +50,7 @@ class Product(models.Model):
 
 
 class ProductImage(models.Model):
-    image = models.ImageField(upload_to="products/")
+    image = CloudinaryField("image")
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="images"
     )

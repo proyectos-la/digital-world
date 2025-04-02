@@ -2,7 +2,7 @@ import os
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, api_view, permission_classes, action
-from rest_framework.generics import ListAPIView
+
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -31,9 +31,9 @@ from django.utils import timezone
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.shortcuts import get_object_or_404
 from django.core.files import File
+from django.db import transaction
 
 from datetime import timedelta
-from decimal import Decimal
 
 from google.auth.transport import requests
 from google.oauth2 import id_token
@@ -249,20 +249,30 @@ class ProductViewSet(viewsets.ModelViewSet):
         product_data = request.data
         product_serializer = ProductSerializer(data=product_data)
         product_serializer.is_valid(raise_exception=True)
-        product = product_serializer.save()
 
         images = request.FILES.getlist("images")
-        for image in images:
-            optimized_image = self.optimize_image(image)
 
-            result = cloudinary.uploader.upload(optimized_image, folder="products/")
+        if not images:
+            raise ValidationError({"images": "Debes subir al menos una imagen."})
+        
+        try:
+            with transaction.atomic():
+                product = product_serializer.save()
 
-            ProductImage.objects.create(product=product, image=result["secure_url"])
+                uploaded_images = []
+                for image in images:
+                    optimized_image = self.optimize_image(image)
 
-        headers = self.get_success_headers(product_serializer.data)
-        return Response(
-            product_serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
+                    result = cloudinary.uploader.upload(optimized_image, folder="products/")
+                    uploaded_images.append(ProductImage(product=product, image=result["secure_url"]))
+
+                ProductImage.objects.bulk_create(uploaded_images)  # 🔹 Carga masiva para eficiencia
+
+            headers = self.get_success_headers(product_serializer.data)
+            return Response(product_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+        except Exception as e:
+            raise ValidationError({"error": f"Error al subir imágenes: {str(e)}"})
     
     def optimize_image(self, image):
         img = Image.open(image)
