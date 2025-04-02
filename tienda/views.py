@@ -6,7 +6,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.authtoken.models import Token
 from rest_framework.pagination import LimitOffsetPagination
 from .models import Product, Category, Brand, Order, OrderItem, Comment, UserProfile
@@ -28,19 +28,21 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.db.models import Q, Case, When, F, FloatField, Sum, Avg
 from django.utils import timezone
-from datetime import timedelta
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.shortcuts import get_object_or_404
+from django.core.files import File
 
+from datetime import timedelta
 from decimal import Decimal
 
 from google.auth.transport import requests
 from google.oauth2 import id_token
 
-from django.shortcuts import get_object_or_404
+import cloudinary.uploader
 
-from urllib.parse import urlparse
-
-from django.core.files import File
 from io import BytesIO
+
+from PIL import Image
 
 
 User = get_user_model()
@@ -251,13 +253,35 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         images = request.FILES.getlist("images")
         for image in images:
-            ProductImage.objects.create(product=product, image=image)
+            optimized_image = self.optimize_image(image)
+
+            result = cloudinary.uploader.upload(optimized_image, folder="products/")
+
+            ProductImage.objects.create(product=product, image=result["secure_url"])
 
         headers = self.get_success_headers(product_serializer.data)
         return Response(
             product_serializer.data, status=status.HTTP_201_CREATED, headers=headers
         )
+    
+    def optimize_image(self, image):
+        img = Image.open(image)
+        img = img.convert("RGB")
 
+        output_io = BytesIO()
+        img.save(output_io, format="WEBP", quality=100)
+        output_io.seek(0)
+
+        new_image = InMemoryUploadedFile(
+            output_io, "ImageField", f"{image.name.split('.')[0]}.webp",
+            "image/webp", output_io.tell(), None
+        )
+
+        if new_image.size > 200 * 1024:
+            raise ValidationError({"image": "La imagen sigue siendo demasiado grande tras la compresión."})
+
+        return new_image
+    
     def get_queryset(self):
         request = self.request
         category_id = request.query_params.get("category")

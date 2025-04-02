@@ -3,6 +3,10 @@ from pathlib import Path
 import environ
 import pymysql
 
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
 pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
@@ -106,3 +110,14 @@ REST_FRAMEWORK = {
 }
 
 
+CLOUDINARY_STORAGE = {
+    "CLOUD_NAME": env("CLOUDINARY_CLOUD_NAME"),
+    "API_KEY": env("CLOUDINARY_API_KEY"),
+    "API_SECRET": env("CLOUDINARY_API_SECRET"),
+}
+
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE["CLOUD_NAME"],
+    api_key=CLOUDINARY_STORAGE["API_KEY"],
+    api_secret=CLOUDINARY_STORAGE["API_SECRET"]
+)
