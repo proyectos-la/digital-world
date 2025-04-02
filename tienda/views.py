@@ -275,11 +275,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             raise ValidationError({"error": f"Error al subir imágenes: {str(e)}"})
     
     def optimize_image(self, image):
-        img = Image.open(image)
-        img = img.convert("RGB")
+        if image.name.lower().endswith(".webp"):
+            return image
+
+        img = Image.open(image).convert("RGB")
 
         output_io = BytesIO()
-        img.save(output_io, format="WEBP", quality=100)
+        img.save(output_io, format="WEBP", quality=80)
         output_io.seek(0)
 
         new_image = InMemoryUploadedFile(
