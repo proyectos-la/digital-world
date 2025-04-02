@@ -264,9 +264,10 @@ class ProductViewSet(viewsets.ModelViewSet):
                     optimized_image = self.optimize_image(image)
 
                     result = cloudinary.uploader.upload(optimized_image, folder="products/")
+                    print("Cloudinary Response:", result)
                     uploaded_images.append(ProductImage(product=product, image=result["secure_url"]))
 
-                ProductImage.objects.bulk_create(uploaded_images)  # 🔹 Carga masiva para eficiencia
+                ProductImage.objects.bulk_create(uploaded_images)
 
             headers = self.get_success_headers(product_serializer.data)
             return Response(product_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
