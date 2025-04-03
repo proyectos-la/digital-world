@@ -276,21 +276,20 @@ class ProductViewSet(viewsets.ModelViewSet):
             raise ValidationError({"error": f"Error al subir imágenes: {str(e)}"})
     
     def perform_destroy(self, instance):
-        """Eliminar imágenes de Cloudinary antes de borrar el producto"""
         product_images = ProductImage.objects.filter(product=instance)
 
         for image in product_images:
             if image.image:
-                # Extraer el public_id de la URL de Cloudinary
-                public_id = image.image.split("/")[-1].split(".")[0]  
-                cloudinary.uploader.destroy(public_id)  # Borra la imagen en Cloudinary
+                url_parts = image.image.split("/")
+                public_id_with_extension = "/".join(url_parts[-2:])
+                public_id = ".".join(public_id_with_extension.split(".")[:-1])
+                print(public_id)
+                cloudinary.uploader.destroy(public_id)
 
-        # Eliminar las imágenes de la BD
         product_images.delete()
         
-        # Finalmente, eliminar el producto
         instance.delete()
-        
+
     def optimize_image(self, image):
         if image.name.lower().endswith(".webp"):
             return image
