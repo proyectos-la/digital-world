@@ -10,7 +10,6 @@ import cloudinary.api
 pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
-print(cloudinary)
 env = environ.Env()
 
 env.read_env(os.path.join(BASE_DIR, '.env'))

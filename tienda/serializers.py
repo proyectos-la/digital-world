@@ -211,7 +211,6 @@ class ProductSerializer(serializers.ModelSerializer):
         if obj.discount_percentage:
             final_price = obj.price - (obj.price * obj.discount_percentage / 100)
         
-        # Redondea a 2 decimales
         return round(final_price, 2)
     
     def get_total_sold(self, obj):
