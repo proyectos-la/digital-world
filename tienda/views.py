@@ -79,6 +79,9 @@ def authenticate_user(username_or_email=None, password=None):
     return None
 
 def optimize_image(image, max_size_kb=200, quality=80, format="WEBP"):
+
+    if not hasattr(image, "name"):
+        image.name = "temp_image.jpg"
     
     if image.name.lower().endswith(".webp"):
         return image
@@ -189,6 +192,7 @@ def google_login(request):
                     print(response)
                     if response.status_code == 200:
                         image_bytes = BytesIO(response.content)
+                        image_bytes.name = "profile_picture.jpg"
                         image = optimize_image(image_bytes)
                         print(image)
                         result = cloudinary.uploader.upload(image, folder="users/", 
