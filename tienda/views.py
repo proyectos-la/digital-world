@@ -76,6 +76,37 @@ def authenticate_user(username_or_email=None, password=None):
         return user
     return None
 
+def optimize_image(image, max_size_kb=200, quality=80, format="WEBP"):
+    
+    if image.name.lower().endswith(".webp"):
+        return image
+
+    img = Image.open(image).convert("RGB")
+
+    output_io = BytesIO()
+    img.save(output_io, format=format, quality=quality)
+    output_io.seek(0)
+
+    new_image = InMemoryUploadedFile(
+        output_io, "ImageField", f"{image.name.split('.')[0]}.webp",
+        "image/webp", output_io.tell(), None
+    )
+
+    while new_image.size > max_size_kb * 1024 and quality > 50:
+        quality -= 5
+        output_io = BytesIO()
+        img.save(output_io, format=format, quality=quality)
+        output_io.seek(0)
+
+        new_image = InMemoryUploadedFile(
+            output_io, "ImageField", f"{image.name.split('.')[0]}.webp",
+            "image/webp", output_io.tell(), None
+        )
+
+    if new_image.size > max_size_kb * 1024:
+        raise ValidationError({"image": "La imagen sigue siendo demasiado grande tras la compresión."})
+
+    return new_image
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -127,7 +158,6 @@ def login_user(request):
 @permission_classes([AllowAny])
 def google_login(request):
     credential = request.data.get("credential")
-    print("Credential received:", credential)
     client_id = (
         "963077110039-a25ipd3d3aal87omlseibm178m2n6jht.apps.googleusercontent.com"
     )
@@ -158,9 +188,22 @@ def google_login(request):
 
                 if profile_picture:
                     response = requests.get(profile_picture)
-                    image = BytesIO(response.content)
-                    user.profile_picture.save('profile_picture.jpg', File(image), save=True)
 
+                    if response.status_code == 200:
+                        image_bytes = BytesIO(response.content)
+                        image = optimize_image(image_bytes)
+                        
+                        print(image)
+                        # result = cloudinary.uploader.upload(image, folder="users/", 
+                        #     public_id=f"{user.id}_profile", 
+                        #     overwrite=True, 
+                        #     resource_type="image",
+                        #     format="webp"
+                        # ),
+
+                        # user.profile_picture = result.get("secure_url")
+                        # user.save()
+    
             has_password = user.has_usable_password()
 
             token, _ = Token.objects.get_or_create(user=user)
@@ -262,9 +305,8 @@ class ProductViewSet(viewsets.ModelViewSet):
                 uploaded_images = []
                 for image in images:
                     optimized_image = self.optimize_image(image)
-
+                    print(optimized_image)
                     result = cloudinary.uploader.upload(optimized_image, folder="products/")
-                    print("Cloudinary Response:", result)
                     uploaded_images.append(ProductImage(product=product, image=result["secure_url"]))
 
                 ProductImage.objects.bulk_create(uploaded_images)
@@ -289,26 +331,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         product_images.delete()
         
         instance.delete()
-
-    def optimize_image(self, image):
-        if image.name.lower().endswith(".webp"):
-            return image
-
-        img = Image.open(image).convert("RGB")
-
-        output_io = BytesIO()
-        img.save(output_io, format="WEBP", quality=80)
-        output_io.seek(0)
-
-        new_image = InMemoryUploadedFile(
-            output_io, "ImageField", f"{image.name.split('.')[0]}.webp",
-            "image/webp", output_io.tell(), None
-        )
-
-        if new_image.size > 200 * 1024:
-            raise ValidationError({"image": "La imagen sigue siendo demasiado grande tras la compresión."})
-
-        return new_image
     
     def get_queryset(self):
         request = self.request

@@ -6,7 +6,7 @@ User = get_user_model()
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-    image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
+    image = models.URLField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.user.username} Profile"
