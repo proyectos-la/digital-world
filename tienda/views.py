@@ -182,13 +182,8 @@ def google_login(request):
                 email=email, defaults={"username": username}
             )
 
-            if created:
-                user.set_unusable_password()
-                user.save()
-
             if profile_picture:
                     response = requests.get(profile_picture)
-                    print(response)
                     if response.status_code == 200:
                         image_bytes = BytesIO(response.content)
                         image = optimize_image(image_bytes)
@@ -199,9 +194,10 @@ def google_login(request):
                             resource_type="image",
                             format="webp"
                         ),
-                        print(result)
 
-            
+            if created:
+                user.set_unusable_password()
+                user.save()
 
                 
                         
