@@ -1,4 +1,6 @@
 import os
+import requests
+
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, api_view, permission_classes, action
@@ -35,7 +37,7 @@ from django.db import transaction
 
 from datetime import timedelta
 
-from google.auth.transport import requests
+from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 
 import cloudinary.uploader
@@ -170,7 +172,7 @@ def google_login(request):
 
     try:
         user_authenticated = id_token.verify_oauth2_token(
-            credential, requests.Request(), client_id, clock_skew_in_seconds=60
+            credential, google_requests.Request(), client_id, clock_skew_in_seconds=60
         )
 
         if user_authenticated:
@@ -184,6 +186,7 @@ def google_login(request):
 
             if profile_picture:
                     response = requests.get(profile_picture)
+                    print(response)
                     if response.status_code == 200:
                         image_bytes = BytesIO(response.content)
                         image = optimize_image(image_bytes)
@@ -194,13 +197,10 @@ def google_login(request):
                             resource_type="image",
                             format="webp"
                         ),
-
+                        print(result)
             if created:
                 user.set_unusable_password()
                 user.save()
-
-                
-                        
 
                         # user.profile_picture = result.get("secure_url")
                         # user.save()
