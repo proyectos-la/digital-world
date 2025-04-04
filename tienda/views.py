@@ -187,26 +187,6 @@ def google_login(request):
                 email=email, defaults={"username": username}
             )
 
-            user_profile, _ = UserProfile.objects.get_or_create(user=user)
-
-            if profile_picture:
-                        response = requests.get(profile_picture)
-                        if response.status_code == 200:
-                            image_bytes = BytesIO(response.content)
-                            image_bytes.name = "profile_picture.jpg"
-
-                            image = optimize_image(image_bytes)
-
-                            result = cloudinary.uploader.upload(image, folder="users/", 
-                                public_id=f"{user.id}_profile", 
-                                overwrite=True, 
-                                resource_type="image",
-                                format="webp"
-                            )
-                
-                            user_profile.image = result.get("secure_url")
-                            user_profile.save()
-
             if created:
                 user.set_unusable_password()
                 user.save()
@@ -243,7 +223,7 @@ def google_login(request):
                     "email": user.email,
                     "is_superuser": user.is_superuser,
                     "is_staff": user.is_staff,
-                    "image": profile_picture,
+                    "image": user.profile.image,
                     "provider_auth": "google",
                     "has_password": has_password,
                 },
