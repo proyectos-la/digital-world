@@ -186,19 +186,24 @@ def google_login(request):
                 user.set_unusable_password()
                 user.save()
 
-                if profile_picture:
+            if profile_picture:
                     response = requests.get(profile_picture)
                     print(response)
                     if response.status_code == 200:
                         image_bytes = BytesIO(response.content)
                         image = optimize_image(image_bytes)
-                        
+                        print(image)
                         result = cloudinary.uploader.upload(image, folder="users/", 
                             public_id=f"{user.id}_profile", 
                             overwrite=True, 
                             resource_type="image",
                             format="webp"
                         ),
+                        print(result)
+
+            
+
+                
                         
 
                         # user.profile_picture = result.get("secure_url")
