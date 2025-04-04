@@ -304,7 +304,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
                 uploaded_images = []
                 for image in images:
-                    optimized_image = self.optimize_image(image)
+                    optimized_image = optimize_image(image)
                     print(optimized_image)
                     result = cloudinary.uploader.upload(optimized_image, folder="products/")
                     uploaded_images.append(ProductImage(product=product, image=result["secure_url"]))
