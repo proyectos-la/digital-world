@@ -193,13 +193,13 @@ def google_login(request):
                         image_bytes = BytesIO(response.content)
                         image = optimize_image(image_bytes)
                         
-                        print(image)
-                        # result = cloudinary.uploader.upload(image, folder="users/", 
-                        #     public_id=f"{user.id}_profile", 
-                        #     overwrite=True, 
-                        #     resource_type="image",
-                        #     format="webp"
-                        # ),
+                        result = cloudinary.uploader.upload(image, folder="users/", 
+                            public_id=f"{user.id}_profile", 
+                            overwrite=True, 
+                            resource_type="image",
+                            format="webp"
+                        ),
+                        print(result)
 
                         # user.profile_picture = result.get("secure_url")
                         # user.save()
