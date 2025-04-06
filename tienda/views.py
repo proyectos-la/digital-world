@@ -505,10 +505,10 @@ class CommentViewSet(viewsets.ModelViewSet):
         user = request.user.id
 
         print(request.query_params)
-
+        print(user)
         if page_identifier:
             comments = Comment.objects.filter(page_id=page_identifier)
-            print(comments, user)
+            print(comments)
             if user:
                 comments = sorted(
                     comments, key=lambda comment: (comment.user.id != user)
