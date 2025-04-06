@@ -29,13 +29,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ["username", "email", "password", "confirm_password", "id", "image"]
         
     def get_image(self, obj):
-       
+       request = self.context.get("request")
+       image = getattr(obj.profile, "image", None)
         
-        if hasattr(obj, 'profile') and obj.profile.image:
-            
-            return obj.profile.image.url
+       if image and hasattr(image, "url"):
+        return request.build_absolute_uri(image.url)
     
-        return None 
+       return None 
 
     def validate(self, data):
         username = data.get("username", "")
@@ -111,7 +111,6 @@ class UserUpdateSerializer(serializers.Serializer):
     def validate(self, data):
         user = self.context["request"].user
 
-        # Validar si se está intentando cambiar el username
         if "new_username" in data:
             new_username = data["new_username"]
             if User.objects.filter(username=new_username).exists():
@@ -119,7 +118,6 @@ class UserUpdateSerializer(serializers.Serializer):
                     "El nombre de usuario ya está en uso."
                 )
 
-        # Validar si se está intentando cambiar el email
         if "new_email" in data:
             new_email = data["new_email"]
             if User.objects.filter(email=new_email).exists():
@@ -127,7 +125,6 @@ class UserUpdateSerializer(serializers.Serializer):
                     "El correo electrónico ya está en uso."
                 )
 
-        # Validar si se está intentando cambiar la contraseña
         if "new_password" in data or "new_password_repeat" in data:
             new_password = data.get("new_password")
             new_password_repeat = data.get("new_password_repeat")
@@ -140,15 +137,12 @@ class UserUpdateSerializer(serializers.Serializer):
         return data
 
     def update(self, instance, validated_data):
-        # Cambiar el nombre de usuario
         if "new_username" in validated_data:
             instance.username = validated_data["new_username"]
 
-        # Cambiar el correo electrónico
         if "new_email" in validated_data:
             instance.email = validated_data["new_email"]
 
-        # Cambiar la contraseña
         if "new_password" in validated_data:
             instance.set_password(validated_data["new_password"])
 
