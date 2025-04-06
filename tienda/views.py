@@ -504,6 +504,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         product_id = request.query_params.get("product")
         user = request.user.id
 
+        print(request.query_params)
+
         if page_identifier:
             comments = Comment.objects.filter(page_id=page_identifier)
             if user:
