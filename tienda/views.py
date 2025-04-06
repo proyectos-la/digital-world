@@ -500,39 +500,49 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[AllowAny])
     def get_comments(self, request):
-        page_identifier = request.query_params.get("page_id")
-        product_id = request.query_params.get("product")
-        user = request.user.id
+        try:
+            page_identifier = request.query_params.get("page_id")
+            product_id = request.query_params.get("product")
+            user = request.user.id if request.user.is_authenticated else None
 
-        print(request.query_params)
-        print(user)
-        if page_identifier:
-            comments = Comment.objects.filter(page_id=page_identifier)
-            print(comments)
-            if user:
-                comments = sorted(
-                    comments, key=lambda comment: (comment.user.id != user)
+            print("Query params:", request.query_params)
+            print("User ID:", user)
+
+            if page_identifier:
+                comments = Comment.objects.filter(page_id=page_identifier)
+                print("Comentarios:", comments)
+
+                if user:
+                    comments = sorted(
+                        comments, key=lambda comment: (comment.user.id != user)
+                    )
+
+                serializer = CommentSerializer(
+                    comments, many=True, context={"request": request}
                 )
-            serializer = CommentSerializer(
-                comments, many=True, context={"request": request}
-            )
-            return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
-        if product_id:
-            comments = Comment.objects.filter(product=product_id)
-            if user:
-                comments = sorted(
-                    comments, key=lambda comment: (comment.user.id != user)
+            if product_id:
+                comments = Comment.objects.filter(product=product_id)
+
+                if user:
+                    comments = sorted(
+                        comments, key=lambda comment: (comment.user.id != user)
+                    )
+
+                serializer = CommentSerializer(
+                    comments, many=True, context={"request": request}
                 )
-            serializer = CommentSerializer(
-                comments, many=True, context={"request": request}
-            )
-            return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(
-            {"error": "Debe proporcionar un page_id o product_id."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+            return Response(
+                {"error": "Debe proporcionar un page_id o product_id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except Exception as e:
+            print("🔥 Error en get_comments:", e)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
