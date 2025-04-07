@@ -182,7 +182,7 @@ def google_login(request):
             email = user_authenticated.get("email")
             username = user_authenticated.get("name")
             profile_picture = user_authenticated.get("picture")
-
+            print("Profile picture:", profile_picture)
             user = User.objects.filter(email=email).first()
             if not user:
                 base_username = username or email.split("@")[0]
