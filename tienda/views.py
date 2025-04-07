@@ -174,72 +174,76 @@ def google_login(request):
         )
 
     try:
-        user_authenticated = id_token.verify_oauth2_token(
-            credential, google_requests.Request(), client_id, clock_skew_in_seconds=60
+        user_data = id_token.verify_oauth2_token(
+            credential, 
+            google_requests.Request(), 
+            client_id
         )
-        print("User authenticated:", user_authenticated)
+        print("User authenticated:", user_data)
 
-        if user_authenticated:
-            email = user_authenticated.get("email")
-            username = user_authenticated.get("name")
-            profile_picture = user_authenticated.get("picture")
+        email = user_data.get("email")
+        username = user_data.get("name")
+        picture_url = user_data.get("picture")
 
-            user, created = User.objects.get_or_create(
-                email=email, defaults={"username": username}
+        if not email:
+            return Response(
+                {"error": "No se recibió el correo electrónico desde Google"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-            if created:
-                user.set_unusable_password()
-                user.save()
+        user, created = User.objects.get_or_create(
+            email=email, defaults={"username": username}
+        )
 
-                user_profile, _ = UserProfile.objects.get_or_create(user=user)
+        if created:
+            user.set_unusable_password()
+            user.save()
 
-                if profile_picture:
-                        response = requests.get(profile_picture)
-                        if response.status_code == 200:
-                            image_bytes = BytesIO(response.content)
-                            image_bytes.name = "profile_picture.jpg"
+        profile, _ = UserProfile.objects.get_or_create(user=user)
 
-                            image = optimize_image(image_bytes)
+        if created and picture_url and not profile.image:
+            try:
+                response = requests.get(picture_url)
+                if response.status_code == 200:
+                    image_file = BytesIO(response.content)
+                    image_file.name = "profile_picture.jpg"
 
-                            result = cloudinary.uploader.upload(image, folder="users/", 
-                                public_id=f"{user.id}_profile", 
-                                overwrite=True, 
-                                resource_type="image",
-                                format="webp"
-                            )
-                
-                            user_profile.image = result.get("secure_url")
-                            user_profile.save()
+                    optimized_image = optimize_image(image_file)
+
+                    cloudinary_response = cloudinary.uploader.upload(
+                        optimized_image,
+                        folder="users/",
+                        public_id=f"{user.id}_profile",
+                        overwrite=True,
+                        resource_type="image",
+                        format="webp"
+                    )
+
+                    profile.image = cloudinary_response.get("secure_url")
+                    profile.save()
+            except Exception as e:
+                print("Error al subir imagen:", e)
+
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response(
+            {
+                "id": user.id,
+                "token": token.key,
+                "username": user.username,
+                "email": user.email,
+                "is_superuser": user.is_superuser,
+                "is_staff": user.is_staff,
+                "image": profile.image.url if profile.image else None,
+                "provider_auth": "google",
+                "has_password": user.has_usable_password(),
+            },
+            status=status.HTTP_200_OK
+        )
     
-            has_password = user.has_usable_password()
-
-            token, _ = Token.objects.get_or_create(user=user)
-
-            return Response(
-                {
-                    "id": user.id,
-                    "token": token.key,
-                    "username": user.username,
-                    "email": user.email,
-                    "is_superuser": user.is_superuser,
-                    "is_staff": user.is_staff,
-                    "image": user.profile.image,
-                    "provider_auth": "google",
-                    "has_password": has_password,
-                },
-                status=status.HTTP_200_OK,
-            )
-        else:
-            return Response(
-                {"error": "Credencial inválida"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-
     except ValueError as e:
         print("Error de verificación de token:", e)
-        return Response(
-            {"error": str(e)}, status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({"error": "Token inválido"}, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
         print("Error inesperado:", e)
