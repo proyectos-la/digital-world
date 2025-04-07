@@ -30,12 +30,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         
     def get_image(self, obj):
        request = self.context.get("request")
-       image = getattr(obj.profile, "image", None)
+       profile = getattr(obj, "profile", None)
+       image = getattr(profile, "image", None)
         
-       if image and hasattr(image, "url"):
-        return request.build_absolute_uri(image.url)
+       if image:
+        if image.startswith("http"):
+            return image
+        return request.build_absolute_uri(image)
     
-       return None 
+       return None
 
     def validate(self, data):
         username = data.get("username", "")
