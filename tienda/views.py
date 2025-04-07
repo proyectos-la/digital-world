@@ -234,7 +234,7 @@ def google_login(request):
                 "email": user.email,
                 "is_superuser": user.is_superuser,
                 "is_staff": user.is_staff,
-                "image": profile.image.url if profile.image else None,
+                "image": profile.image if profile.image else None,
                 "provider_auth": "google",
                 "has_password": user.has_usable_password(),
             },
