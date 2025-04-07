@@ -166,7 +166,7 @@ def google_login(request):
     client_id = (
         "963077110039-a25ipd3d3aal87omlseibm178m2n6jht.apps.googleusercontent.com"
     )
-
+    print("Credential:", credential)
     if not credential:
         return Response(
             {"error": "Debe proporcionar la credencial de Google"},
@@ -177,6 +177,7 @@ def google_login(request):
         user_authenticated = id_token.verify_oauth2_token(
             credential, google_requests.Request(), client_id, clock_skew_in_seconds=60
         )
+        print("User authenticated:", user_authenticated)
 
         if user_authenticated:
             email = user_authenticated.get("email")
@@ -241,6 +242,7 @@ def google_login(request):
         )
 
     except Exception as e:
+        print("Error inesperado:", e)
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -505,12 +507,8 @@ class CommentViewSet(viewsets.ModelViewSet):
             product_id = request.query_params.get("product")
             user = request.user.id if request.user.is_authenticated else None
 
-            print("Query params:", request.query_params)
-            print("User ID:", user)
-
             if page_identifier:
                 comments = Comment.objects.filter(page_id=page_identifier)
-                print("Comentarios:", comments)
 
                 if user:
                     comments = sorted(
