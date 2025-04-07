@@ -163,10 +163,9 @@ def login_user(request):
 @permission_classes([AllowAny])
 def google_login(request):
     credential = request.data.get("credential")
-    client_id = (
-        "963077110039-a25ipd3d3aal87omlseibm178m2n6jht.apps.googleusercontent.com"
-    )
+    client_id = "963077110039-a25ipd3d3aal87omlseibm178m2n6jht.apps.googleusercontent.com"
     print("Credential:", credential)
+
     if not credential:
         return Response(
             {"error": "Debe proporcionar la credencial de Google"},
@@ -174,81 +173,92 @@ def google_login(request):
         )
 
     try:
-        user_data = id_token.verify_oauth2_token(
-            credential, 
-            google_requests.Request(), 
-            client_id
+        user_authenticated = id_token.verify_oauth2_token(
+            credential, google_requests.Request(), client_id, clock_skew_in_seconds=60
         )
-        print("User authenticated:", user_data)
+        print("User authenticated:", user_authenticated)
 
-        email = user_data.get("email")
-        username = user_data.get("name")
-        picture_url = user_data.get("picture")
+        if user_authenticated:
+            email = user_authenticated.get("email")
+            username = user_authenticated.get("name")
+            profile_picture = user_authenticated.get("picture")
 
-        if not email:
+            user = User.objects.filter(email=email).first()
+            if not user:
+                base_username = username or email.split("@")[0]
+                unique_username = base_username
+                counter = 1
+                while User.objects.filter(username=unique_username).exists():
+                    unique_username = f"{base_username}_{counter}"
+                    counter += 1
+
+                user = User.objects.create(
+                    email=email,
+                    username=unique_username,
+                )
+                user.set_unusable_password()
+                user.save()
+                created = True
+            else:
+                created = False
+
+            if created:
+                user_profile, _ = UserProfile.objects.get_or_create(user=user)
+
+                if profile_picture:
+                    response = requests.get(profile_picture)
+                    if response.status_code == 200:
+                        image_bytes = BytesIO(response.content)
+                        image_bytes.name = "profile_picture.jpg"
+
+                        image = optimize_image(image_bytes)
+
+                        result = cloudinary.uploader.upload(
+                            image,
+                            folder="users/",
+                            public_id=f"{user.id}_profile",
+                            overwrite=True,
+                            resource_type="image",
+                            format="webp",
+                        )
+
+                        user_profile.image = result.get("secure_url")
+                        user_profile.save()
+
+            has_password = user.has_usable_password()
+
+            token, _ = Token.objects.get_or_create(user=user)
+
             return Response(
-                {"error": "No se recibió el correo electrónico desde Google"},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "id": user.id,
+                    "token": token.key,
+                    "username": user.username,
+                    "email": user.email,
+                    "is_superuser": user.is_superuser,
+                    "is_staff": user.is_staff,
+                    "image": user.profile.image if hasattr(user, "profile") else None,
+                    "provider_auth": "google",
+                    "has_password": has_password,
+                },
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {"error": "Credencial inválida"},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        user, created = User.objects.get_or_create(
-            email=email, defaults={"username": username}
-        )
-
-        if created:
-            user.set_unusable_password()
-            user.save()
-
-        profile, _ = UserProfile.objects.get_or_create(user=user)
-
-        if created and picture_url and not profile.image:
-            try:
-                response = requests.get(picture_url)
-                if response.status_code == 200:
-                    image_file = BytesIO(response.content)
-                    image_file.name = "profile_picture.jpg"
-
-                    optimized_image = optimize_image(image_file)
-
-                    cloudinary_response = cloudinary.uploader.upload(
-                        optimized_image,
-                        folder="users/",
-                        public_id=f"{user.id}_profile",
-                        overwrite=True,
-                        resource_type="image",
-                        format="webp"
-                    )
-
-                    profile.image = cloudinary_response.get("secure_url")
-                    profile.save()
-            except Exception as e:
-                print("Error al subir imagen:", e)
-
-        token, _ = Token.objects.get_or_create(user=user)
-
-        return Response(
-            {
-                "id": user.id,
-                "token": token.key,
-                "username": user.username,
-                "email": user.email,
-                "is_superuser": user.is_superuser,
-                "is_staff": user.is_staff,
-                "image": profile.image if profile.image else None,
-                "provider_auth": "google",
-                "has_password": user.has_usable_password(),
-            },
-            status=status.HTTP_200_OK
-        )
-    
     except ValueError as e:
         print("Error de verificación de token:", e)
-        return Response({"error": "Token inválido"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
         print("Error inesperado:", e)
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        return Response(
+            {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+       
 
 @api_view(["POST"])
 def logout_user(request):
