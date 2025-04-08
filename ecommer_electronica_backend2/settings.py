@@ -118,3 +118,7 @@ cloudinary.config(
     api_key=CLOUDINARY_STORAGE["API_KEY"],
     api_secret=CLOUDINARY_STORAGE["API_SECRET"]
 )
+
+print("BASE_DIR:", BASE_DIR)
+print("CLOUD_NAME:", env("CLOUDINARY_CLOUD_NAME"))
+print("ALLOWED_HOSTS:", ALLOWED_HOSTS)
