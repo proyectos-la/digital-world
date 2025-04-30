@@ -365,7 +365,14 @@ class ProductViewSet(viewsets.ModelViewSet):
                 return Product.objects.filter(is_on_sale=True)
             elif sort == "latest":
                 return Product.objects.order_by('-created_at')
-            return Product.objects.all()
+            else:
+                products = Product.objects.all()
+
+            if products.exists():
+                serializer = ProductSerializer(products, many=True)
+                return Response(serializer.data)
+            else:
+                return Response({"detail": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
 
         queryset = Product.objects.filter(category__id=category_id)
 
