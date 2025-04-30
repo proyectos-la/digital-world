@@ -355,58 +355,64 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         instance.delete()
     
-    def get_queryset(self):
-        request = self.request
-        category_id = request.query_params.get("category")
-        sort = request.query_params.get("sort")
-        
-        if not category_id:
-            if sort == "discount":
-                return Product.objects.filter(is_on_sale=True)
-            elif sort == "latest":
-                return Product.objects.order_by('-created_at')
-            else:
-                products = Product.objects.all()
+    def list(self, request):
+        try:
+            category_id = request.query_params.get("category")
+            sort = request.query_params.get("sort")
 
-            if products.exists():
-                serializer = ProductSerializer(products, many=True)
-                return Response(serializer.data)
-            else:
+            if not category_id:
+                if sort == "discount":
+                    products = Product.objects.filter(is_on_sale=True)
+                elif sort == "latest":
+                    products = Product.objects.order_by("-created_at")
+                else:
+                    products = Product.objects.all()
+
+                if products.exists():
+                    serializer = ProductSerializer(products, many=True)
+                    return Response(serializer.data)
+                else:
+                    return Response({"detail": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
+
+            queryset = Product.objects.filter(category__id=category_id)
+
+            brand = request.query_params.get("brand")
+            min_price = request.query_params.get("min_price")
+            max_price = request.query_params.get("max_price")
+
+            if brand:
+                queryset = queryset.filter(brand__name=brand)
+
+            queryset = queryset.annotate(
+                price_final=Case(
+                    When(is_on_sale=True, then=F("price") * (1 - F("discount_percentage") / 100)),
+                    default=F("price"),
+                    output_field=FloatField(),
+                )
+            )
+
+            if min_price:
+                queryset = queryset.filter(price_final__gte=min_price)
+            if max_price:
+                queryset = queryset.filter(price_final__lte=max_price)
+
+            if sort == "best_selling":
+                queryset = queryset.annotate(total_sales=Sum("order_items__quantity")).order_by("-total_sales")
+            elif sort == "best_rated":
+                queryset = queryset.annotate(avg_rating=Avg("comment__rating")).order_by("-avg_rating")
+            elif sort == "latest":
+                queryset = queryset.order_by("-created_at")
+            elif sort == "discount":
+                queryset = queryset.filter(is_on_sale=True).order_by("-discount_percentage")
+
+            if not queryset.exists():
                 return Response({"detail": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
 
-        queryset = Product.objects.filter(category__id=category_id)
+            serializer = ProductSerializer(queryset, many=True)
+            return Response(serializer.data)
 
-        brand = request.query_params.get("brand")
-        min_price = request.query_params.get("min_price")
-        max_price = request.query_params.get("max_price")
-        sort = request.query_params.get("sort")
-            
-        if brand:
-            queryset = queryset.filter(brand__name=brand)
-            
-        queryset = queryset.annotate(
-            price_final=Case(
-                When(is_on_sale=True, then=F("price") * (1 - F("discount_percentage") / 100)),
-                default=F("price"),
-                output_field=FloatField(),
-            )
-        )
-            
-        if min_price:
-            queryset = queryset.filter(price_final__gte=min_price)
-        if max_price:
-            queryset = queryset.filter(price_final__lte=max_price)
-            
-        if sort == "best_selling":
-            queryset = queryset.annotate(total_sales=Sum("order_items__quantity")).order_by("-total_sales")
-        elif sort == "best_rated":
-            queryset = queryset.annotate(avg_rating=Avg("comment__rating")).order_by("-avg_rating")
-        elif sort == "latest":
-            queryset = queryset.order_by("-created_at")
-        elif sort == "discount":
-            queryset = queryset.filter(is_on_sale=True).order_by("-discount_percentage")
-
-        return queryset
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def retrieve(self, request, *args, **kwargs):
         product = get_object_or_404(Product, pk=kwargs["pk"])
