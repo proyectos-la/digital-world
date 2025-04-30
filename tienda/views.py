@@ -356,6 +356,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         instance.delete()
     
     def list(self, request):
+        print("Entró a list()")
         try:
             category_id = request.query_params.get("category")
             sort = request.query_params.get("sort")
