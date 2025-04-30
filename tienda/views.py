@@ -368,11 +368,11 @@ class ProductViewSet(viewsets.ModelViewSet):
                 else:
                     products = Product.objects.all()
 
-                if products.exists():
-                    serializer = ProductSerializer(products, many=True)
-                    return Response(serializer.data)
-                else:
+                if not products.exists():
                     return Response({"detail": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
+
+                serializer = self.get_serializer(products, many=True)
+                return Response(serializer.data)
 
             queryset = Product.objects.filter(category__id=category_id)
 
@@ -408,7 +408,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             if not queryset.exists():
                 return Response({"detail": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
 
-            serializer = ProductSerializer(queryset, many=True)
+            serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
 
         except Exception as e:
