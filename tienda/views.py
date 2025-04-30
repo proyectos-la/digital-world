@@ -356,7 +356,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         instance.delete()
     
     def list(self, request):
-        print("Entró a list()")
         try:
             category_id = request.query_params.get("category")
             sort = request.query_params.get("sort")
@@ -370,7 +369,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                     products = Product.objects.all()
 
                 if not products.exists():
-                    return Response({"detail": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
+                    return Response({"message": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
 
                 serializer = self.get_serializer(products, many=True)
                 return Response(serializer.data)
@@ -407,7 +406,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(is_on_sale=True).order_by("-discount_percentage")
 
             if not queryset.exists():
-                return Response({"detail": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"message": "No hay productos disponibles."}, status=status.HTTP_404_NOT_FOUND)
 
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
